@@ -2,8 +2,19 @@
 	"node": "n8n-nodes-apipj.apipj",
 	"nodeVersion": "1.0",
 	"codexVersion": "1.0",
-	"categories": ["Data & Storage", "Sales"],
-	"alias": ["CNPJ", "Receita Federal", "empresa", "consulta CNPJ", "validar CNPJ", "Brasil"],
+	"categories": [
+		"Data & Storage",
+		"Sales"
+	],
+	"alias": [
+		"CNPJ",
+		"Receita Federal",
+		"Brazil",
+		"company lookup",
+		"consulta CNPJ",
+		"validar CNPJ",
+		"empresa"
+	],
 	"resources": {
 		"credentialDocumentation": [
 			{

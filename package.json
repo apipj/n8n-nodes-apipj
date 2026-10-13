@@ -1,7 +1,7 @@
 {
   "name": "n8n-nodes-apipj",
   "version": "0.1.0",
-  "description": "Consultar CNPJ no n8n com a API CNPJ gratuita do apipj: razão social, situação cadastral, endereço, CNAE, sócios e Simples Nacional direto da base da Receita Federal. Valida CNPJ numérico e alfanumérico. Funciona como ferramenta de AI Agent.",
+  "description": "API CNPJ gratuita no n8n: consultar CNPJ na Receita Federal, validar CNPJ e CNPJ alfanumérico. Brazilian CNPJ company lookup node (free API).",
   "license": "MIT",
   "homepage": "https://apipj.com.br",
   "keywords": [
@@ -17,7 +17,10 @@
     "validar cnpj",
     "cnpj alfanumerico",
     "apipj",
-    "brasil"
+    "brasil",
+    "brazil",
+    "company lookup",
+    "cnpj lookup"
   ],
   "author": {
     "name": "MASTER BI TECNOLOGIA LTDA",

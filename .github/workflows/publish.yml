@@ -12,7 +12,7 @@
 #      pacote existe no npm): crie um Granular Access Token com permissão de publicação e salve como
 #      secret NPM_TOKEN no repositório. Com trusted publishing configurado, apague o secret.
 #
-# Para publicar: atualize "version" no package.json (e VERSAO em nodes/Apipj/shared/transport.ts),
+# Para publicar: atualize "version" no package.json (e VERSION em nodes/Apipj/shared/transport.ts),
 # faça commit e envie a tag:  git tag v0.1.0 && git push origin v0.1.0
 
 name: Publish
@@ -56,8 +56,8 @@ jobs:
           if [ "v$VERSION" != "$GITHUB_REF_NAME" ]; then
             echo "A tag $GITHUB_REF_NAME não confere com a versão $VERSION do package.json"; exit 1
           fi
-          grep -q "VERSAO = '$VERSION'" nodes/Apipj/shared/transport.ts || {
-            echo "Atualize VERSAO em nodes/Apipj/shared/transport.ts para $VERSION"; exit 1; }
+          grep -q "VERSION = '$VERSION'" nodes/Apipj/shared/transport.ts || {
+            echo "Atualize VERSION em nodes/Apipj/shared/transport.ts para $VERSION"; exit 1; }
 
       - name: Install dependencies
         run: npm ci

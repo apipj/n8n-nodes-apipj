@@ -18,20 +18,20 @@ export class ApipjApi implements ICredentialType {
 	properties: INodeProperties[] = [
 		{
 			displayName:
-				'Crie uma conta grátis em <a href="https://apipj.com.br/criar-conta" target="_blank">apipj.com.br/criar-conta</a> e copie a chave de API no painel. O plano grátis tem 50.000 consultas por mês.',
+				'Create a free account at <a href="https://apipj.com.br/criar-conta" target="_blank">apipj.com.br/criar-conta</a> and copy your API key from the dashboard. The free plan includes 50,000 lookups per month.',
 			name: 'notice',
 			type: 'notice',
 			default: '',
 		},
 		{
-			displayName: 'Chave De API',
+			displayName: 'API Key',
 			name: 'apiKey',
 			type: 'string',
 			typeOptions: { password: true },
 			required: true,
 			default: '',
 			placeholder: 'e.g. apipj_live_...',
-			description: 'Chave de API do apipj (começa com apipj_live_)',
+			description: 'Your apipj API key (starts with apipj_live_)',
 		},
 	];
 

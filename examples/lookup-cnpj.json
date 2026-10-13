@@ -1,0 +1,71 @@
+{
+  "name": "Look up a CNPJ with apipj",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "6b0c8a52-6d3e-4f3a-9a51-0d5b3c1f0a01",
+      "name": "When clicking Execute workflow",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "validate",
+        "cnpj": "00.000.000/0001-91"
+      },
+      "id": "6b0c8a52-6d3e-4f3a-9a51-0d5b3c1f0a02",
+      "name": "Validate CNPJ",
+      "type": "n8n-nodes-apipj.apipj",
+      "typeVersion": 1,
+      "position": [
+        220,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "lookup",
+        "cnpj": "={{ $json.cnpj }}",
+        "format": "full",
+        "continueIfNotFound": true
+      },
+      "id": "6b0c8a52-6d3e-4f3a-9a51-0d5b3c1f0a03",
+      "name": "Look Up CNPJ",
+      "type": "n8n-nodes-apipj.apipj",
+      "typeVersion": 1,
+      "position": [
+        440,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "When clicking Execute workflow": {
+      "main": [
+        [
+          {
+            "node": "Validate CNPJ",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate CNPJ": {
+      "main": [
+        [
+          {
+            "node": "Look Up CNPJ",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {}
+}

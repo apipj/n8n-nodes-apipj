@@ -8,8 +8,14 @@ import type {
 } from 'n8n-workflow';
 import { NodeApiError, NodeConnectionTypes, NodeOperationError } from 'n8n-workflow';
 
-import { motivoCnpjInvalido, normalizarCnpj } from './shared/cnpj';
+import { invalidCnpjReason, normalizeCnpj } from './shared/cnpj';
 import { apipjRequest } from './shared/transport';
+
+/** UI value of the 'Format' parameter => value of the API's `formato` query parameter. */
+const API_FORMAT: Record<string, string> = {
+	full: 'completo',
+	simplified: 'simplificado',
+};
 
 export class Apipj implements INodeType {
 	description: INodeTypeDescription = {
@@ -19,9 +25,8 @@ export class Apipj implements INodeType {
 		group: ['transform'],
 		version: 1,
 		subtitle:
-			'={{ {"consultar": "Consultar CNPJ", "validar": "Validar CNPJ", "status": "Status da base"}[$parameter["operation"]] }}',
-		description:
-			'Consulta dados de empresas pelo CNPJ (razão social, situação cadastral, endereço, CNAE, sócios, Simples) na base da Receita Federal',
+			'={{ {"lookup": "Look Up CNPJ", "validate": "Validate CNPJ", "status": "Get Dataset Status"}[$parameter["operation"]] }}',
+		description: 'Look up Brazilian companies by CNPJ (Receita Federal open data)',
 		defaults: {
 			name: 'apipj (CNPJ)',
 		},
@@ -34,41 +39,41 @@ export class Apipj implements INodeType {
 				required: true,
 				displayOptions: {
 					show: {
-						operation: ['consultar'],
+						operation: ['lookup'],
 					},
 				},
 			},
 		],
 		properties: [
 			{
-				displayName: 'Operação',
+				displayName: 'Operation',
 				name: 'operation',
 				type: 'options',
 				noDataExpression: true,
 				options: [
 					{
-						name: 'Consultar CNPJ',
-						value: 'consultar',
+						name: 'Look Up CNPJ',
+						value: 'lookup',
 						description:
-							'Busca os dados cadastrais de uma empresa pelo CNPJ (usa a chave de API e consome cota)',
-						action: 'Consultar dados de um CNPJ',
+							'Get the registration data of a company by CNPJ (requires an API key and uses quota)',
+						action: 'Look up a company by CNPJ',
 					},
 					{
-						name: 'Validar CNPJ',
-						value: 'validar',
+						name: 'Validate CNPJ',
+						value: 'validate',
 						description:
-							'Confere formato e dígitos verificadores de um CNPJ numérico ou alfanumérico (sem chave e sem cota)',
-						action: 'Validar um CNPJ',
+							'Check the format and check digits of a numeric or alphanumeric CNPJ (no API key, no quota)',
+						action: 'Validate a CNPJ',
 					},
 					{
-						name: 'Status Da Base',
+						name: 'Get Dataset Status',
 						value: 'status',
 						description:
-							'Mostra o mês de referência e o tamanho da base de CNPJs (sem chave e sem cota)',
-						action: 'Ver o status da base',
+							'Get the reference month and size of the CNPJ dataset (no API key, no quota)',
+						action: 'Get the dataset status',
 					},
 				],
-				default: 'consultar',
+				default: 'lookup',
 			},
 			{
 				displayName: 'CNPJ',
@@ -78,60 +83,49 @@ export class Apipj implements INodeType {
 				default: '',
 				placeholder: 'e.g. 00.000.000/0001-91',
 				description:
-					'CNPJ com ou sem máscara. Aceita o CNPJ alfanumérico (por exemplo 12.ABC.345/01DE-35).',
+					'CNPJ with or without punctuation. Alphanumeric CNPJs are accepted (e.g. 12.ABC.345/01DE-35).',
 				displayOptions: {
 					show: {
-						operation: ['consultar', 'validar'],
+						operation: ['lookup', 'validate'],
 					},
 				},
 			},
 			{
-				displayName: 'Formato',
-				name: 'formato',
+				displayName: 'Format',
+				name: 'format',
 				type: 'options',
 				options: [
 					{
-						name: 'Completo',
-						value: 'completo',
+						name: 'Full',
+						value: 'full',
 						description:
-							'Documento estruturado: razao_social, situacao_cadastral, endereco (com código IBGE), cnae_principal, socios, simples e mais',
+							'Structured document: razao_social, situacao_cadastral, endereco (with IBGE city code), cnae_principal, socios, simples and more',
 					},
 					{
-						name: 'Simplificado',
-						value: 'simplificado',
+						name: 'Simplified',
+						value: 'simplified',
 						description:
-							'Formato plano com datas DD/MM/AAAA e CNPJ, CEP e telefone já formatados (nome, fantasia, situacao, atividade_principal, qsa e mais)',
+							'Flat document with DD/MM/YYYY dates and formatted CNPJ, ZIP code and phone (nome, fantasia, situacao, atividade_principal, qsa and more)',
 					},
 				],
-				default: 'completo',
-				description: 'Formato do documento devolvido pela consulta (os dois custam uma consulta)',
+				default: 'full',
+				description: 'Shape of the returned document (both count as one lookup)',
 				displayOptions: {
 					show: {
-						operation: ['consultar'],
+						operation: ['lookup'],
 					},
 				},
 			},
 			{
-				displayName: 'Quando Não Encontrado',
-				name: 'quandoNaoEncontrado',
-				type: 'options',
-				options: [
-					{
-						name: 'Parar Com Erro',
-						value: 'parar',
-						description: 'O item falha se o CNPJ não está na base da Receita Federal',
-					},
-					{
-						name: 'Continuar Se Não Encontrado',
-						value: 'continuar',
-						description: 'Devolve { cnpj, encontrado: false } e segue o workflow',
-					},
-				],
-				default: 'parar',
-				description: 'O que fazer quando o CNPJ é válido mas não está na base da Receita Federal',
+				displayName: 'Continue If Not Found',
+				name: 'continueIfNotFound',
+				type: 'boolean',
+				default: false,
+				description:
+					'Whether to return { cnpj, found: false } instead of failing the item when the CNPJ is valid but not in the Receita Federal dataset',
 				displayOptions: {
 					show: {
-						operation: ['consultar'],
+						operation: ['lookup'],
 					},
 				},
 			},
@@ -149,15 +143,16 @@ export class Apipj implements INodeType {
 
 				if (operation === 'status') {
 					json = (await apipjRequest.call(this, '/v1/status', {}, itemIndex)).body;
-				} else if (operation === 'validar') {
-					const cnpj = normalizarCnpj(this.getNodeParameter('cnpj', itemIndex));
+				} else if (operation === 'validate') {
+					const cnpj = normalizeCnpj(this.getNodeParameter('cnpj', itemIndex));
 					if (cnpj.length === 0) {
-						throw new NodeOperationError(this.getNode(), "O campo 'CNPJ' está vazio", {
+						throw new NodeOperationError(this.getNode(), "The 'CNPJ' field is empty", {
 							itemIndex,
-							description: 'Informe o CNPJ a validar, com ou sem máscara.',
+							description: 'Enter the CNPJ to validate, with or without punctuation.',
 						});
 					}
 					if (cnpj.length > 32) {
+						// Same shape as the API response, without sending an oversized value.
 						json = {
 							cnpj: cnpj.slice(0, 32),
 							valido: false,
@@ -170,48 +165,55 @@ export class Apipj implements INodeType {
 							await apipjRequest.call(this, `/v1/valida/${encodeURIComponent(cnpj)}`, {}, itemIndex)
 						).body;
 					}
-				} else if (operation === 'consultar') {
-					const cnpj = normalizarCnpj(this.getNodeParameter('cnpj', itemIndex));
-					const formato = this.getNodeParameter('formato', itemIndex, 'completo') as string;
-					const continuar =
-						this.getNodeParameter('quandoNaoEncontrado', itemIndex, 'parar') === 'continuar';
+				} else if (operation === 'lookup') {
+					const cnpj = normalizeCnpj(this.getNodeParameter('cnpj', itemIndex));
+					const format = this.getNodeParameter('format', itemIndex, 'full') as string;
+					const continueIfNotFound = this.getNodeParameter(
+						'continueIfNotFound',
+						itemIndex,
+						false,
+					) as boolean;
 
-					const motivo = motivoCnpjInvalido(cnpj);
-					if (motivo !== null) {
+					const reason = invalidCnpjReason(cnpj);
+					if (reason !== null) {
 						throw new NodeOperationError(
 							this.getNode(),
-							`O valor do campo 'CNPJ' não é um CNPJ válido: ${motivo}`,
+							`The value of the 'CNPJ' field is not a valid CNPJ: ${reason}`,
 							{
 								itemIndex,
 								description:
-									'Nenhuma consulta foi gasta. Confira o CNPJ (14 caracteres, com ou sem máscara) ou use a operação Validar CNPJ antes de consultar.',
+									"No lookup was used. Check the CNPJ (14 characters, with or without punctuation) or run 'Validate CNPJ' first.",
 							},
 						);
 					}
 
+					const apiFormat = API_FORMAT[format] ?? 'completo';
 					const res = await apipjRequest.call(
 						this,
 						`/v1/cnpj/${cnpj}`,
-						{ autenticar: true, qs: formato === 'simplificado' ? { formato } : undefined },
+						{
+							authenticate: true,
+							qs: apiFormat === 'simplificado' ? { formato: apiFormat } : undefined,
+						},
 						itemIndex,
 					);
 
 					if (res.statusCode === 404) {
-						if (!continuar) {
+						if (!continueIfNotFound) {
 							throw new NodeApiError(this.getNode(), res.body as JsonObject, {
 								itemIndex,
 								httpCode: '404',
-								message: `O CNPJ ${cnpj} não está na base da Receita Federal`,
+								message: `CNPJ ${cnpj} is not in the Receita Federal dataset`,
 								description:
-									"Para seguir o workflow nesses casos, escolha 'Continuar Se Não Encontrado' em 'Quando Não Encontrado': o node devolve { cnpj, encontrado: false }.",
+									"To keep the workflow going in this case, turn on 'Continue If Not Found': the node then returns { cnpj, found: false }.",
 							});
 						}
-						json = { cnpj, encontrado: false };
+						json = { cnpj, found: false };
 					} else {
 						json = res.body;
 					}
 				} else {
-					throw new NodeOperationError(this.getNode(), `Operação desconhecida: ${operation}`, {
+					throw new NodeOperationError(this.getNode(), `Unknown operation: ${operation}`, {
 						itemIndex,
 					});
 				}
@@ -225,10 +227,10 @@ export class Apipj implements INodeType {
 					});
 					continue;
 				}
-				// Erros do próprio node já têm mensagem, descrição e itemIndex: repassa sem embrulhar.
+				// The node's own errors already carry message, description and itemIndex: rethrow them as they are.
 				if (error instanceof NodeApiError || error instanceof NodeOperationError) {
-					const erroDoNode = error;
-					throw erroDoNode;
+					const nodeError = error;
+					throw nodeError;
 				}
 				throw new NodeOperationError(this.getNode(), error as Error, { itemIndex });
 			}
