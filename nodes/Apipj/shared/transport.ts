@@ -9,7 +9,7 @@ import { NodeApiError, sleep } from 'n8n-workflow';
 
 export const BASE_URL = 'https://apipj.com.br';
 /** Keep in sync with "version" in package.json (only used in the User-Agent header). */
-export const VERSION = '0.1.0';
+export const VERSION = '0.1.1';
 
 export const SIGNUP_URL = 'https://apipj.com.br/criar-conta';
 export const UPGRADE_DEV_URL = 'https://apipj.com.br/painel?assinar=dev';

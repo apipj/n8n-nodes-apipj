@@ -1,6 +1,6 @@
 {
   "name": "n8n-nodes-apipj",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "API CNPJ gratuita no n8n: consultar CNPJ na Receita Federal, validar CNPJ e CNPJ alfanumérico. Brazilian CNPJ company lookup node (free API).",
   "license": "MIT",
   "homepage": "https://apipj.com.br",
